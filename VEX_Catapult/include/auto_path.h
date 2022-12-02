@@ -18,7 +18,7 @@ void PIDGyroTurn(float target)
     pid.setErrorTolerance(1);
     pid.setDTolerance(4); // 2.6 deg / sec
     pid.setJumpTime(0.01);
-    while (!pid.targetArrived() && myTimer.getTime() < 1000 + abbs(target * 3))
+    while (!pid.targetArrived())
     {
         pid.update(getHeading());
         driveRotate(pid.getOutput());
@@ -27,20 +27,20 @@ void PIDGyroTurn(float target)
     driveRotate(0);
 }
 
-void PIDForward(float target, float vmax = 100)
+void PIDForward(float target, float vmax = 150)
 {
     resetChassisEncoder();
     float heading = getHeading();
     float dt = 0.01;
     float timeroffset = TIMER;
     float timeused = 0;
-    float kp = 1;       // 3.0 , 3.95
+    float kp = 1.0;     // 3.0 , 3.95
     float ki = 12.0;    // 28.9 , 28.6
     float kd = 0.1;     // 29.9 , 29.9
     float irange = 2.0; // ji fen fan wei
     float istart = 60;  // start to integral
-    float dtol = 0.1;
-    float errortolerance = 8; // 2.5zd
+    float dtol = 0.15;
+    float errortolerance = 15; // 2.5zd
     float lim = vmax;
     float error = target - getForwardEncoder();
     float lasterror;
@@ -48,7 +48,7 @@ void PIDForward(float target, float vmax = 100)
     float i = 0;
     bool arrived;
     float timetol = abbs(error) < 20 ? 700 : abbs(error) * 24;
-    float pow, jumpTrigger = 200;
+    float pow;
     lasterror = error;
     arrived = error == 0;
     while (!arrived)
@@ -56,7 +56,8 @@ void PIDForward(float target, float vmax = 100)
         timeused = TIMER - timeroffset;
         error = abbs(target) - getForwardEncoder();
         v = (error - lasterror) / dt;
-        if ((abbs(error) < errortolerance && abbs(v) <= dtol))
+        if ((abbs(error) < errortolerance && abbs(v) <= dtol) ||
+            timeused > timetol)
         {
             arrived = true;
         }
@@ -68,6 +69,7 @@ void PIDForward(float target, float vmax = 100)
         pow = abbs(pow) > lim ? sgn(pow) * lim : pow;
         // driveForward(sgn(target) * pow);
         driveForward(sgn(target) * pow, heading);
+        cout << error << "  " << pow << "  " << endl;
         // cout<<gyroValue()<<endl;
         // cout<<timeused<<endl;
         // printScreen(10,100,"Iner %f",Iner.rotation());
